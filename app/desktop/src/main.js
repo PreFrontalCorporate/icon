@@ -20,8 +20,8 @@ function log() {
     }
     try {
         var line = "[".concat(new Date().toISOString(), "] ").concat(args.map(function (a) { return String(a); }).join(' '), "\n");
-        var logPath = node_path_1.default.join(electron_1.app.getPath('userData'), 'icon-desktop.log');
-        node_fs_1.default.appendFileSync(logPath, line);
+        var logPath = node_path_1.join(electron_1.app.getPath('userData'), 'icon-desktop.log');
+        node_fs_1.appendFileSync(logPath, line);
     }
     catch (_a) { }
     // eslint-disable-next-line no-console
@@ -30,9 +30,9 @@ function log() {
 // Robust preload resolution (dev builds have preload.js; packaged build renames to preload.cjs)
 function resolvePreload() {
     var dir = __dirname;
-    var cjs = node_path_1.default.join(dir, 'preload.cjs');
-    var js = node_path_1.default.join(dir, 'preload.js');
-    return node_fs_1.default.existsSync(cjs) ? cjs : js;
+    var cjs = node_path_1.join(dir, 'preload.cjs');
+    var js = node_path_1.join(dir, 'preload.js');
+    return node_fs_1.existsSync(cjs) ? cjs : js;
 }
 var mainWin = null;
 // lazy import to avoid circular import during transpile
@@ -58,7 +58,7 @@ function buildMenu() {
             submenu: [
                 {
                     label: 'Open logs folder',
-                    click: function () { return electron_1.shell.showItemInFolder(node_path_1.default.join(electron_1.app.getPath('userData'), 'icon-desktop.log')); }
+                    click: function () { return electron_1.shell.showItemInFolder(node_path_1.join(electron_1.app.getPath('userData'), 'icon-desktop.log')); }
                 }
             ]
         }
@@ -78,14 +78,15 @@ function createMainWindow() {
             preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: false
+            sandbox: false,
+            webviewTag: true
         }
     });
     mainWin.setMenu(buildMenu());
     log('Using preload:', preloadPath);
     // Load the in‑app Library window (it iframes the hosted Library UI and talks via postMessage).
     // File lives in app/desktop/windows/library.html
-    var libraryHtml = node_path_1.default.join(__dirname, '../windows/library.html');
+    var libraryHtml = node_path_1.join(__dirname, '../windows/library.html');
     var fileUrl = "file://".concat(libraryHtml.replace(/\\/g, '/'));
     log('Loading Library:', fileUrl);
     mainWin.loadURL(fileUrl).catch(function (err) { return log('loadURL threw:', (err === null || err === void 0 ? void 0 : err.stack) || String(err)); });
@@ -123,3 +124,5 @@ electron_1.app.on('activate', function () { if (electron_1.BrowserWindow.getAllW
 /* ───────── IPC: overlay control ───────── */
 electron_1.ipcMain.handle('overlay:create', function (_e, id, url) { return overlay.create(id, url); });
 electron_1.ipcMain.handle('overlay:clearAll', function () { return overlay.clearAll(); });
+// Provide app helpers expected by renderer
+electron_1.ipcMain.handle('app/version', function () { return electron_1.app.getVersion(); });
