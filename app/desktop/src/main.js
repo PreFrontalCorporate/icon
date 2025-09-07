@@ -126,3 +126,5 @@ electron_1.ipcMain.handle('overlay:create', function (_e, id, url) { return over
 electron_1.ipcMain.handle('overlay:clearAll', function () { return overlay.clearAll(); });
 // Provide app helpers expected by renderer
 electron_1.ipcMain.handle('app/version', function () { return electron_1.app.getVersion(); });
+// Compatibility: support overlay/pin used by TS preload
+electron_1.ipcMain.handle('overlay/pin', function (_e, url) { return overlay.create('url:' + url, url); });
