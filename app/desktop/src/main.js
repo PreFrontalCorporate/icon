@@ -156,6 +156,7 @@ electron_1.app.whenReady().then(function () {
         electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+P', function () { return electron_1.ipcMain.emit('overlay:party'); });
         electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+B', function () { return electron_1.ipcMain.emit('overlay:toggleBounce'); });
         electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+R', function () { return electron_1.ipcMain.emit('overlay:rain', 24); });
+        electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+T', function () { return overlay.create('test:' + Date.now(), 'https://icon-web-two.vercel.app/test.png'); });
     }
     catch (e) {
         log('register hotkeys error', e);
