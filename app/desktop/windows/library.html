@@ -9,6 +9,7 @@
     </style>
   </head>
   <body>
+    <div id="brand" style="position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; color:#ddd; font:700 44px/1 system-ui, -apple-system, 'Segoe UI', Roboto; text-transform:none; letter-spacing:.5px;">icon</div>
     <!-- IMPORTANT: preload is our fixed bridge above -->
     <webview
       id="libview"
@@ -20,6 +21,7 @@
 
     <script>
       const libview = document.getElementById('libview');
+      const brand = document.getElementById('brand');
 
       // Ensure we only attach this listener once.
       if (!window.libraryListenerAttached) {
@@ -39,6 +41,7 @@
       libview.addEventListener('dom-ready', () => {
         // The webview is ready, give it focus.
         libview.focus();
+        if (brand) brand.style.display = 'none';
       });
     </script>
   </body>
