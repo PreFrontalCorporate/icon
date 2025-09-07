@@ -45,7 +45,9 @@ function buildMenu() {
         {
             label: 'File',
             submenu: [
-                { label: 'Clear all stickers', accelerator: 'CommandOrControl+Shift+X', click: function () { return overlay.clearAll(); } },
+                { label: 'Pin from clipboard', accelerator: 'CommandOrControl+Alt+Shift+V', click: function () { return electron_1.ipcMain.emit('overlay:pinClipboard'); } },
+                { type: 'separator' },
+                { label: 'Clear all stickers', accelerator: 'CommandOrControl+Alt+Shift+X', click: function () { return overlay.clearAll(); } },
                 { type: 'separator' },
                 { role: 'quit' },
             ]
@@ -59,10 +61,41 @@ function buildMenu() {
                 {
                     label: 'Open logs folder',
                     click: function () { return electron_1.shell.showItemInFolder(node_path_1.join(electron_1.app.getPath('userData'), 'icon-desktop.log')); }
-                }
+                },
+                { type: 'separator' },
+                { label: 'Open Store (icon.coupons)', click: function () { return electron_1.shell.openExternal('https://icon.coupons'); } },
+                { label: 'Open Shopify Store', click: function () { return electron_1.shell.openExternal('https://store.cbb.homes'); } },
+                { type: 'separator' },
+                { label: 'Keyboard Shortcuts', click: function () { return showHotkeys(); } }
             ]
         }
     ]);
+}
+
+// Small helper window to show hotkeys
+var hotkeyWin = null;
+function showHotkeys() {
+    try {
+        if (hotkeyWin && !hotkeyWin.isDestroyed()) {
+            hotkeyWin.close();
+            hotkeyWin = null;
+            return;
+        }
+    }
+    catch (_a) { }
+    hotkeyWin = new electron_1.BrowserWindow({
+        width: 420,
+        height: 260,
+        resizable: false,
+        alwaysOnTop: true,
+        frame: false,
+        transparent: true,
+        skipTaskbar: true,
+        webPreferences: { sandbox: false }
+    });
+    hotkeyWin.loadURL('data:text/html,' + encodeURIComponent("\n    <meta charset=\\'utf-8\\'>\n    <style>html,body{margin:0} .box{position:fixed;inset:0;margin:auto;width:400px;height:240px;background:rgba(20,20,20,.92);color:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.45);font:13px system-ui;padding:16px} h2{margin:0 0 8px 0;font:600 16px system-ui} code{background:#333;padding:2px 6px;border-radius:6px}</style>\n    <div class=box>\n      <h2>Keyboard shortcuts</h2>\n      <div><code>Ctrl+Alt+Shift+V</code> Pin from clipboard (image URL)</div>\n      <div><code>Ctrl+Alt+Shift+X</code> Clear all overlays</div>\n      <div><code>Ctrl+Alt+Shift+B</code> Toggle bounce all</div>\n      <div><code>Ctrl+Alt+Shift+R</code> Rain 24 overlays</div>\n      <div><code>Ctrl+Alt+Shift+P</code> Party mode (random fx)</div>\n      <div style=\"opacity:.75;margin-top:10px\">Overlay window: R rotate • B bounce • S chime • Esc close • Double‑click close</div>\n      <div style=\"margin-top:14px;opacity:.7\">Press this hotkey again to close.</div>\n    </div>\n  "));
+    try { hotkeyWin.setVisibleOnAllWorkspaces(true); }
+    catch (_b) { }
 }
 function createMainWindow() {
     var preloadPath = resolvePreload();
@@ -112,8 +145,18 @@ function createMainWindow() {
 }
 electron_1.app.whenReady().then(function () {
     createMainWindow();
-    // Global hotkey to clear everything fast
-    electron_1.globalShortcut.register('CommandOrControl+Shift+X', function () { return overlay.clearAll(); });
+    // Global hotkeys (avoid common OS collisions)
+    try {
+        electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+X', function () { return overlay.clearAll(); });
+        electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+H', function () { return showHotkeys(); });
+        electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+V', function () { return electron_1.ipcMain.emit('overlay:pinClipboard'); });
+        electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+P', function () { return electron_1.ipcMain.emit('overlay:party'); });
+        electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+B', function () { return electron_1.ipcMain.emit('overlay:toggleBounce'); });
+        electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+R', function () { return electron_1.ipcMain.emit('overlay:rain', 24); });
+    }
+    catch (e) {
+        log('register hotkeys error', e);
+    }
 }).catch(function (e) { return log('app.whenReady error', e); });
 electron_1.app.on('window-all-closed', function () {
     if (process.platform !== 'darwin')
@@ -128,3 +171,18 @@ electron_1.ipcMain.handle('overlay:clearAll', function () { return overlay.clear
 electron_1.ipcMain.handle('app/version', function () { return electron_1.app.getVersion(); });
 // Compatibility: support overlay/pin used by TS preload
 electron_1.ipcMain.handle('overlay/pin', function (_e, url) { return overlay.create('url:' + url, url); });
+// Extras
+electron_1.ipcMain.on('overlay:pinClipboard', function () {
+    try {
+        var clip = require('electron').clipboard.readText().trim();
+        if (/^https?:\/\//i.test(clip)) {
+            overlay.create('clip:' + clip, clip);
+        }
+    }
+    catch (e) {
+        log('pinClipboard error', e);
+    }
+});
+electron_1.ipcMain.on('overlay:rain', function (_e, n) { return overlay.rain(typeof n === 'number' ? n : 20); });
+electron_1.ipcMain.on('overlay:toggleBounce', function () { return overlay.toggleBounceAll(); });
+electron_1.ipcMain.on('overlay:party', function () { return overlay.party(); });

@@ -2,12 +2,21 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createOverlay = createOverlay;
 exports.removeAllOverlays = removeAllOverlays;
+exports.rain = rain;
+exports.toggleBounceAll = toggleBounceAll;
+exports.party = party;
 // app/desktop/src/ipc/overlay.ts
 var electron_1 = require("electron");
 var node_path_1 = require("node:path");
 var ACTIVE = new Map();
+var LAST_URL = '';
+var BOUNCE_ALL = false;
 /** Create (or reveal) a frameless always‑on‑top overlay for one sticker */
 function createOverlay(id, imgUrl) {
+    try {
+        LAST_URL = imgUrl || LAST_URL || '';
+    }
+    catch (_) { }
     if (ACTIVE.has(id)) {
         ACTIVE.get(id).show();
         return;
@@ -41,4 +50,36 @@ function createOverlay(id, imgUrl) {
 function removeAllOverlays() {
     ACTIVE.forEach(function (w) { return w.close(); });
     ACTIVE.clear();
+}
+
+function rain(n) {
+    var url = LAST_URL || 'https://icon-web-two.vercel.app/test.png';
+    for (var i = 0; i < n; i++) {
+        try {
+            var id = 'rain:' + Date.now() + ':' + i;
+            createOverlay(id, url);
+        }
+        catch (_) { }
+    }
+}
+
+function toggleBounceAll() {
+    BOUNCE_ALL = !BOUNCE_ALL;
+    ACTIVE.forEach(function (w) {
+        try {
+            w.webContents.executeJavaScript("(function(){var el=document.getElementById('img'); if(!el)return; el.classList.".concat(BOUNCE_ALL ? 'add' : 'remove', "('bouncing');})()"));
+        }
+        catch (_) { }
+    });
+}
+
+function party() {
+    var keys = ['r', 's', 'b'];
+    ACTIVE.forEach(function (w) {
+        try {
+            var key = keys[Math.floor(Math.random() * keys.length)];
+            w.webContents.executeJavaScript("window.dispatchEvent(new KeyboardEvent('keydown',{key:'".concat(key, "'}))"));
+        }
+        catch (_) { }
+    });
 }
