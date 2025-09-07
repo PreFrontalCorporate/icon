@@ -10,6 +10,17 @@
   </head>
   <body>
     <div id="brand" style="position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; color:#ddd; font:700 44px/1 system-ui, -apple-system, 'Segoe UI', Roboto; text-transform:none; letter-spacing:.5px;">icon</div>
+    <div id="toolbar" style="position:fixed; top:0; left:0; right:0; height:42px; display:flex; align-items:center; gap:10px; padding:0 10px; background:rgba(17,17,17,.85); color:#fff; z-index:20; -webkit-user-select:none;">
+      <div style="font:600 14px system-ui; letter-spacing:.3px">icon</div>
+      <div style="opacity:.65; margin-left:6px">·</div>
+      <button id="nav-library" style="background:transparent; border:0; color:#fff; opacity:.9; cursor:pointer; padding:6px 8px; border-radius:8px">Library</button>
+      <button id="nav-store" style="background:#2563eb; border:0; color:#fff; cursor:pointer; padding:6px 10px; border-radius:8px">Store</button>
+      <button id="nav-coupons" style="background:#4b5563; border:0; color:#fff; cursor:pointer; padding:6px 10px; border-radius:8px">Coupons</button>
+      <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
+        <button id="nav-hotkeys" title="Shortcuts" style="background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff; cursor:pointer; padding:4px 8px; border-radius:8px">Hotkeys</button>
+        <button id="nav-clear" title="Clear overlays" style="background:#ef4444; border:0; color:#fff; cursor:pointer; padding:6px 10px; border-radius:8px">Clear</button>
+      </div>
+    </div>
     <!-- IMPORTANT: preload is our fixed bridge above -->
     <webview
       id="libview"
@@ -43,6 +54,13 @@
         libview.focus();
         if (brand) brand.style.display = 'none';
       });
+
+      const to = (url) => { libview.loadURL(url); };
+      document.getElementById('nav-library')?.addEventListener('click', () => to('https://icon-web-two.vercel.app/library'));
+      document.getElementById('nav-store')?.addEventListener('click', () => window.api?.openExternal?.('https://store.cbb.homes'));
+      document.getElementById('nav-coupons')?.addEventListener('click', () => window.api?.openExternal?.('https://icon.coupons'));
+      document.getElementById('nav-hotkeys')?.addEventListener('click', () => { window.postMessage({type:'icon:show-hotkeys'}, '*'); });
+      document.getElementById('nav-clear')?.addEventListener('click', () => window.icon?.clearOverlays?.());
     </script>
   </body>
 </html>

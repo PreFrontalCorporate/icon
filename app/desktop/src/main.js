@@ -38,7 +38,10 @@ var mainWin = null;
 // lazy import to avoid circular import during transpile
 var overlay = {
     create: function (id, url) { return Promise.resolve().then(function () { return require('./ipc/overlay'); }).then(function (m) { return m.createOverlay(id, url); }); },
-    clearAll: function () { return Promise.resolve().then(function () { return require('./ipc/overlay'); }).then(function (m) { return m.removeAllOverlays(); }); }
+    clearAll: function () { return Promise.resolve().then(function () { return require('./ipc/overlay'); }).then(function (m) { return m.removeAllOverlays(); }); },
+    rain: function (n) { return Promise.resolve().then(function () { return require('./ipc/overlay'); }).then(function (m) { return m.rain(n); }); },
+    toggleBounceAll: function () { return Promise.resolve().then(function () { return require('./ipc/overlay'); }).then(function (m) { return m.toggleBounceAll(); }); },
+    party: function () { return Promise.resolve().then(function () { return require('./ipc/overlay'); }).then(function (m) { return m.party(); }); }
 };
 function buildMenu() {
     return electron_1.Menu.buildFromTemplate([
@@ -165,12 +168,14 @@ electron_1.app.on('window-all-closed', function () {
 electron_1.app.on('activate', function () { if (electron_1.BrowserWindow.getAllWindows().length === 0)
     createMainWindow(); });
 /* ───────── IPC: overlay control ───────── */
-electron_1.ipcMain.handle('overlay:create', function (_e, id, url) { return overlay.create(id, url); });
+electron_1.ipcMain.handle('overlay:create', function (_e, id, url) { log('ipc overlay:create', id, url); return overlay.create(id, url); });
 electron_1.ipcMain.handle('overlay:clearAll', function () { return overlay.clearAll(); });
 // Provide app helpers expected by renderer
 electron_1.ipcMain.handle('app/version', function () { return electron_1.app.getVersion(); });
+electron_1.ipcMain.handle('app/openExternal', function (_e, url) { return electron_1.shell.openExternal(url); });
+electron_1.ipcMain.handle('app/hotkeys', function () { showHotkeys(); });
 // Compatibility: support overlay/pin used by TS preload
-electron_1.ipcMain.handle('overlay/pin', function (_e, url) { return overlay.create('url:' + url, url); });
+electron_1.ipcMain.handle('overlay/pin', function (_e, url) { log('ipc overlay:pin', url); return overlay.create('url:' + url, url); });
 // Extras
 electron_1.ipcMain.on('overlay:pinClipboard', function () {
     try {
