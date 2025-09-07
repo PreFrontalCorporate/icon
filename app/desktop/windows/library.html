@@ -61,7 +61,10 @@
       });
 
       const to = (url) => { libview.loadURL(url); };
-      document.getElementById('nav-library')?.addEventListener('click', () => { try { libview.reload(); } catch { to('https://icon-web-two.vercel.app/library'); } });
+      document.getElementById('nav-library')?.addEventListener('click', () => {
+        try { libview.executeJavaScript("location.href='/library'"); }
+        catch { to('https://icon-web-two.vercel.app/library'); }
+      });
       document.getElementById('nav-store')?.addEventListener('click', () => window.api?.openExternal?.('https://icon.coupons'));
       document.getElementById('nav-hotkeys')?.addEventListener('click', () => { window.postMessage({type:'icon:show-hotkeys'}, '*'); });
       document.getElementById('nav-clear')?.addEventListener('click', () => window.icon?.clearOverlays?.());
