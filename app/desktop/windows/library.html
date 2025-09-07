@@ -59,12 +59,25 @@
         libview.focus();
         if (brand) brand.style.display = 'none';
       });
+      libview.addEventListener('did-navigate', (e) => {
+        try {
+          if (/\/login/.test(e.url || '')) { window.icon?.clearOverlays?.(); }
+        } catch {}
+      });
+      libview.addEventListener('did-navigate-in-page', (e) => {
+        try {
+          if (/\/login/.test(e.url || '')) { window.icon?.clearOverlays?.(); }
+        } catch {}
+      });
 
       const to = (url) => { libview.loadURL(url); };
       document.getElementById('nav-library')?.addEventListener('click', () => {
         // Always load the Library app URL explicitly to avoid domain-relative 404s
-        try { to('https://icon-web-two.vercel.app/library'); libview.focus(); }
-        catch { /* fall back ignored */ }
+        try {
+          window.icon?.clearOverlays?.();
+          to('https://icon-web-two.vercel.app/library');
+          libview.focus();
+        } catch { /* fall back ignored */ }
       });
       document.getElementById('nav-store')?.addEventListener('click', () => { try { to('https://icon.coupons'); libview.focus(); } catch { window.api?.openExternal?.('https://icon.coupons'); } });
       document.getElementById('nav-hotkeys')?.addEventListener('click', () => { window.postMessage({type:'icon:show-hotkeys'}, '*'); });

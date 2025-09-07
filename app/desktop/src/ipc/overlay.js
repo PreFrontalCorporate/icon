@@ -8,11 +8,13 @@ exports.party = party;
 // app/desktop/src/ipc/overlay.ts
 var electron_1 = require("electron");
 var node_path_1 = require("node:path");
+var https_1 = require("node:https");
 var ACTIVE = new Map();
 var LAST_URL = '';
 var BOUNCE_ALL = false;
 /** Create (or reveal) a frameless always‑on‑top overlay for one sticker */
 function createOverlay(id, imgUrl) {
+    try { console.log('[overlay] createOverlay', id, imgUrl); } catch (e) {}
     try {
         LAST_URL = imgUrl || LAST_URL || '';
     }
@@ -47,6 +49,34 @@ function createOverlay(id, imgUrl) {
     try { win.once('ready-to-show', function () { try { win.show(); win.focus(); } catch (e) {} }); } catch (e) {}
     try { win.setVisibleOnAllWorkspaces(true); } catch (_c) {}
     try { win.focus(); } catch (_d) {}
+    try {
+        win.webContents.on('did-start-loading', function () { try { console.log('[overlay] did-start-loading', id); } catch (e) {} });
+        win.webContents.on('did-finish-load', function () {
+            try {
+                console.log('[overlay] did-finish-load', id);
+                if (/^https?:/i.test(imgUrl)) {
+                    (0, https_1.get)(imgUrl, function (res) {
+                        try {
+                            var chunks_1 = [];
+                            res.on('data', function (d) { return chunks_1.push(d); });
+                            res.on('end', function () {
+                                try {
+                                    var buf = Buffer.concat(chunks_1);
+                                    var ct = res.headers['content-type'] || 'image/webp';
+                                    var dataUrl = 'data:' + ct + ';base64,' + buf.toString('base64');
+                                    win.webContents.executeJavaScript("(function(){var el=document.getElementById('img'); if(el) el.src='" + dataUrl.replace(/'/g, "\\'") + "';})()");
+                                }
+                                catch (_e) { }
+                            });
+                        }
+                        catch (_e) { }
+                    }).on('error', function () { });
+                }
+            }
+            catch (_e) { }
+        });
+        win.webContents.on('did-fail-load', function (_e, code, desc, url) { try { console.error('[overlay] did-fail-load', id, code, desc, url); } catch (e) {} });
+    } catch (e) {}
     win.on('closed', function () { return ACTIVE.delete(id); });
     ACTIVE.set(id, win);
 }

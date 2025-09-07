@@ -176,7 +176,7 @@ electron_1.ipcMain.handle('app/version', function () { return electron_1.app.get
 electron_1.ipcMain.handle('app/openExternal', function (_e, url) { return electron_1.shell.openExternal(url); });
 electron_1.ipcMain.handle('app/hotkeys', function () { showHotkeys(); });
 // Compatibility: support overlay/pin used by TS preload
-electron_1.ipcMain.handle('overlay/pin', function (_e, url) { log('ipc overlay:pin', url); return overlay.create('url:' + url, url); });
+electron_1.ipcMain.handle('overlay/pin', function (_e, url) { log('ipc overlay:pin', url); return overlay.create('url:' + Date.now() + ':' + Math.floor(Math.random()*1e6), url); });
 // Extras
 electron_1.ipcMain.on('overlay:pinClipboard', function () {
     try {
