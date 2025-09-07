@@ -41,9 +41,10 @@
         libview.addEventListener('ipc-message', (event) => {
           // GOAL:webview.single_ipc_message
           if (event.channel === 'icon:webview-sticker' && event.args?.[0]?.src) {
-            console.log('[icon] sticker from webview:', event.args?.[0]?.src);
-            // The main window's preload script (preload.ts) exposes `window.icon.addSticker`.
-            window.icon?.addSticker?.({ src: event.args[0].src });
+            const url = event.args?.[0]?.src;
+            console.log('[icon] sticker from webview:', url);
+            try { window.icon?.addSticker?.({ src: url }); } catch (e) { console.warn('window.icon.addSticker failed', e); }
+            try { window.api?.overlays?.pinFromUrl?.(url); } catch (e) { console.warn('api.overlays.pinFromUrl failed', e); }
           }
           if (event.channel === 'icon:webview-ready') {
             console.log('[icon] webview preload ready');
