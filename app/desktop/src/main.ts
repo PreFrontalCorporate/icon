@@ -1,5 +1,9 @@
 import { app, BrowserWindow, ipcMain, globalShortcut, shell } from 'electron';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWin: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
@@ -75,7 +79,40 @@ function registerGlobalShortcuts() {
     'CommandOrControl+Alt+R': () => sendToOverlay('overlay:rain', 30),
     'CommandOrControl+Alt+1': () => sendToOverlay('overlay:mix', 'A'),
     'CommandOrControl+Alt+2': () => sendToOverlay('overlay:mix', 'B'),
-    'CommandOrControl+Alt+3': () => sendToOverlay('overlay:mix', 'C'),
+    'CommandOrControl+Alt+3':.env
+.env.example
+.gitconfig
+.github
+.gitignore
+.npmrc
+.sudo_as_admin_successful
+AGENT_CONTEXT.md
+LICENSE
+README.md
+agent.py
+app
+build.gradle.kts
+components
+docs
+dump_repo.py
+edited_agent.py
+next.config.js
+package-lock.json
+package.json
+packages
+playwright.config.ts
+pnpm-lock.yaml
+pnpm-workspace.yaml
+product_catalog.csv
+scripts
+settings.gradle.kts
+src
+tailwind.config.js
+tests
+tsconfig.json
+turbo.json
+workers-src
+ () => sendToOverlay('overlay:mix', 'C'),
   };
 
   for (const [accelerator, action] of Object.entries(mapping)) {
