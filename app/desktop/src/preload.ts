@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('api', {
   },
 });
 
+// Provide small desktop API expected by renderer
+contextBridge.exposeInMainWorld('desktop', {
+  version: () => ipcRenderer.invoke('app/version') as Promise<string>,
+});
+
 // Minimal compat for wrapper’s script:
 Object.defineProperty(window, 'icon', {
   value: {

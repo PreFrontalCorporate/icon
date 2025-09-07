@@ -1,154 +1,114 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, shell } from 'electron';
-import * as path from 'node:path';
+import { app, BrowserWindow, ipcMain, globalShortcut, Menu, shell } from 'electron';
+import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { registerOverlayIpc } from './ipc/overlay';
 
+// Ensure __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let mainWin: BrowserWindow | null = null;
-let overlayWindow: BrowserWindow | null = null;
 const isDev = !app.isPackaged;
-const preloadPath = path.join(__dirname, isDev ? 'preload.js' : 'preload.cjs');
 
-// GOAL:main.single_overlay
-function getOverlayWindow() {
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    return overlayWindow;
-  }
+function log(...args: any[]) {
+  try {
+    const line = `[${new Date().toISOString()}] ${args.map(a => String(a)).join(' ')}\n`;
+    const logPath = path.join(app.getPath('userData'), 'icon-desktop.log');
+    fs.appendFileSync(logPath, line);
+  } catch {}
+  // eslint-disable-next-line no-console
+  console.log('[main]', ...args);
+}
 
-  overlayWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    transparent: true,
-    frame: false,
-    focusable: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    hasShadow: false,
-    webPreferences: {
-      preload: preloadPath,
-      sandbox: false, // Overlay needs to live outside sandbox for some syscalls
+function resolvePreload() {
+  const cjs = path.join(__dirname, 'preload.cjs');
+  const js = path.join(__dirname, 'preload.js');
+  return fs.existsSync(cjs) ? cjs : js;
+}
+
+let mainWin: BrowserWindow | null = null;
+
+function buildMenu() {
+  return Menu.buildFromTemplate([
+    {
+      label: 'File',
+      submenu: [
+        { label: 'Clear all stickers', accelerator: 'CommandOrControl+Shift+X', click: () => ipcMain.emit('overlay:clearAll-request') },
+        { type: 'separator' },
+        { role: 'quit' },
+      ]
     },
-  });
-
-  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
-  overlayWindow.loadFile(path.join(__dirname, '../overlay/index.html'));
-  overlayWindow.on('closed', () => { overlayWindow = null; });
-
-  return overlayWindow;
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { role: 'windowMenu' },
+    {
+      role: 'help',
+      submenu: [
+        { label: 'Open logs folder', click: () => shell.showItemInFolder(path.join(app.getPath('userData'), 'icon-desktop.log')) },
+      ]
+    }
+  ]);
 }
 
-function sendToOverlay(channel: string, ...args: any[]) {
-  getOverlayWindow()?.webContents.send(channel, ...args);
-}
-
-async function createMainWindow() {
+function createMainWindow() {
+  const preloadPath = resolvePreload();
   mainWin = new BrowserWindow({
     width: 1024,
-    height: 768,
-    show: false, // Start hidden, show when ready
+    height: 720,
+    minWidth: 800,
+    minHeight: 600,
+    backgroundColor: '#151515',
+    autoHideMenuBar: false,
+    show: true,
     webPreferences: {
       preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
       webviewTag: true,
-    },
-  });
-
-  mainWin.loadFile(path.join(__dirname, '../windows/library.html'));
-
-  // More robust show logic
-  mainWin.once('ready-to-show', () => {
-    if (mainWin) {
-      mainWin.show();
     }
   });
 
+  mainWin.setMenu(buildMenu());
+  log('Using preload:', preloadPath);
+
+  const libraryHtml = path.join(__dirname, '../windows/library.html');
+  const fileUrl = 'file://' + libraryHtml.replace(/\\/g, '/');
+  log('Loading Library:', fileUrl);
+  mainWin.loadURL(fileUrl).catch(err => log('loadURL threw:', (err as any)?.stack || String(err)));
+
+  mainWin.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    log('did-fail-load', code, desc, url);
+    const html = Buffer.from(`\n      <!doctype html><meta charset=\"utf-8\">\n      <title>Icon Desktop - Error</title>\n      <body style=\"font:14px system-ui;padding:24px;background:#111;color:#eee;\">\n        <h1>Icon Desktop</h1>\n        <p>Renderer failed to load.</p>\n        <pre style=\"white-space:pre-wrap;background:#222;padding:12px;border-radius:8px;\">${desc} (${code})\nTried: ${fileUrl}</pre>\n      </body>`);
+    mainWin?.loadURL('data:text/html;base64,' + html.toString('base64'));
+  });
+
+  mainWin.on('ready-to-show', () => mainWin?.show());
   mainWin.on('closed', () => { mainWin = null; });
 
-  // Forward events from the main window (hosting the webview) to the overlay
-  ipcMain.on('icon:webview-sticker', (_event, arg) => {
-    sendToOverlay('sticker:add', arg);
+  mainWin.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url).catch(() => {});
+    return { action: 'deny' };
   });
-}
 
-function registerGlobalShortcuts() {
-  const mapping = {
-    'CommandOrControl+Shift+O': () => sendToOverlay('overlay:toggle'),
-    'CommandOrControl+Shift+0': () => sendToOverlay('overlay:toggle'),
-    'CommandOrControl+Shift+Backspace': () => sendToOverlay('overlay:nuke'),
-    'CommandOrControl+Alt+M': () => sendToOverlay('overlay:nuke'),
-    'CommandOrControl+Alt+H': () => sendToOverlay('overlay:toggleHide'),
-    'CommandOrControl+Alt+S': () => sendToOverlay('overlay:shuffle'),
-    'CommandOrControl+Alt+R': () => sendToOverlay('overlay:rain', 30),
-    'CommandOrControl+Alt+1': () => sendToOverlay('overlay:mix', 'A'),
-    'CommandOrControl+Alt+2': () => sendToOverlay('overlay:mix', 'B'),
-    'CommandOrControl+Alt+3':.env
-.env.example
-.gitconfig
-.github
-.gitignore
-.npmrc
-.sudo_as_admin_successful
-AGENT_CONTEXT.md
-LICENSE
-README.md
-agent.py
-app
-build.gradle.kts
-components
-docs
-dump_repo.py
-edited_agent.py
-next.config.js
-package-lock.json
-package.json
-packages
-playwright.config.ts
-pnpm-lock.yaml
-pnpm-workspace.yaml
-product_catalog.csv
-scripts
-settings.gradle.kts
-src
-tailwind.config.js
-tests
-tsconfig.json
-turbo.json
-workers-src
- () => sendToOverlay('overlay:mix', 'C'),
-  };
-
-  for (const [accelerator, action] of Object.entries(mapping)) {
-    try {
-      globalShortcut.register(accelerator, action);
-    } catch (e) {
-      console.error(`Failed to register shortcut ${accelerator}:`, e);
-    }
+  if (isDev) {
+    try { mainWin.webContents.openDevTools({ mode: 'detach' }); } catch {}
   }
 }
 
 app.whenReady().then(() => {
+  // Register overlay IPC (count/clearAll/pin)
+  registerOverlayIpc(log);
+
   createMainWindow();
-  getOverlayWindow(); // Pre-warm the overlay
-  registerGlobalShortcuts();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
-    }
-  });
-});
+  // Global hotkey to clear overlays
+  try { globalShortcut.register('CommandOrControl+Shift+X', () => ipcMain.emit('overlay:clearAll-request')); } catch (e) { log('hotkey error', e); }
+}).catch(e => log('app.whenReady error', e));
 
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll();
-});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createMainWindow(); });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-// Handle IPC from preload scripts
-ipcMain.on('app:open-external', (_event, url) => {
-  shell.openExternal(url);
-});
+// IPC for renderer helpers
+ipcMain.handle('app/version', () => app.getVersion());
+ipcMain.handle('app/openExternal', (_e, url: string) => shell.openExternal(url));
