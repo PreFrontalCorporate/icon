@@ -26,8 +26,7 @@ function createOverlay(id, imgUrl) {
         hasShadow: false,
         type: 'toolbar',
         webPreferences: {
-            // IMPORTANT: our preload is CJS at runtime
-            preload: node_path_1.default.join(__dirname, '../preload.cjs'),
+            // No preload necessary for simple overlay window; robust in dev/prod
             sandbox: false,
         }
     });
