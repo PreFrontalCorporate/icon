@@ -15,7 +15,6 @@
       <div style="opacity:.65; margin-left:6px">·</div>
       <button id="nav-library" style="background:transparent; border:0; color:#fff; opacity:.9; cursor:pointer; padding:6px 8px; border-radius:8px">Library</button>
       <button id="nav-store" style="background:#2563eb; border:0; color:#fff; cursor:pointer; padding:6px 10px; border-radius:8px">Store</button>
-      <button id="nav-coupons" style="background:#4b5563; border:0; color:#fff; cursor:pointer; padding:6px 10px; border-radius:8px">Coupons</button>
       <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
         <button id="nav-hotkeys" title="Shortcuts" style="background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff; cursor:pointer; padding:4px 8px; border-radius:8px">Hotkeys</button>
         <button id="nav-clear" title="Clear overlays" style="background:#ef4444; border:0; color:#fff; cursor:pointer; padding:6px 10px; border-radius:8px">Clear</button>
@@ -26,8 +25,9 @@
       id="libview"
       src="https://icon-web-two.vercel.app/library"
       preload="./webview-preload.js"
-      allowpopups
-      partition="persist:iconlib">
+      
+      partition="persist:iconlib"
+      style="position:fixed; top:42px; left:0; right:0; bottom:0; border:0;">
     </webview>
 
     <script>
@@ -41,8 +41,12 @@
         libview.addEventListener('ipc-message', (event) => {
           // GOAL:webview.single_ipc_message
           if (event.channel === 'icon:webview-sticker' && event.args?.[0]?.src) {
+            console.log('[icon] sticker from webview:', event.args?.[0]?.src);
             // The main window's preload script (preload.ts) exposes `window.icon.addSticker`.
             window.icon?.addSticker?.({ src: event.args[0].src });
+          }
+          if (event.channel === 'icon:webview-ready') {
+            console.log('[icon] webview preload ready');
           }
         });
         window.libraryListenerAttached = true;
@@ -56,9 +60,8 @@
       });
 
       const to = (url) => { libview.loadURL(url); };
-      document.getElementById('nav-library')?.addEventListener('click', () => to('https://icon-web-two.vercel.app/library'));
-      document.getElementById('nav-store')?.addEventListener('click', () => window.api?.openExternal?.('https://store.cbb.homes'));
-      document.getElementById('nav-coupons')?.addEventListener('click', () => window.api?.openExternal?.('https://icon.coupons'));
+      document.getElementById('nav-library')?.addEventListener('click', () => { try { libview.reload(); } catch { to('https://icon-web-two.vercel.app/library'); } });
+      document.getElementById('nav-store')?.addEventListener('click', () => window.api?.openExternal?.('https://icon.coupons'));
       document.getElementById('nav-hotkeys')?.addEventListener('click', () => { window.postMessage({type:'icon:show-hotkeys'}, '*'); });
       document.getElementById('nav-clear')?.addEventListener('click', () => window.icon?.clearOverlays?.());
     </script>

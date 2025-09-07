@@ -24,8 +24,11 @@ Object.defineProperty(window, 'icon', {
     value: {
         addSticker: function (payload) {
             var url = (payload === null || payload === void 0 ? void 0 : payload.url) || (payload === null || payload === void 0 ? void 0 : payload.src);
-            if (url)
-                electron_1.ipcRenderer.invoke('overlay:create', 'url:' + url, url);
+            if (!url)
+                return;
+            // Unique id each time so multiple overlays from same image are allowed
+            var id = 'url:' + Date.now() + ':' + Math.floor(Math.random() * 1e6);
+            electron_1.ipcRenderer.invoke('overlay:create', id, url);
         },
         clearOverlays: function () { return electron_1.ipcRenderer.invoke('overlay:clearAll'); },
         onOverlayCount: function (_fn) { return function () { }; },
