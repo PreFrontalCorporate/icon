@@ -7,6 +7,8 @@ const __dirname = path.dirname(__filename);
 
 let mainWin: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
+const isDev = !app.isPackaged;
+const preloadPath = path.join(__dirname, isDev ? 'preload.js' : 'preload.cjs');
 
 // GOAL:main.single_overlay
 function getOverlayWindow() {
@@ -24,7 +26,7 @@ function getOverlayWindow() {
     skipTaskbar: true,
     hasShadow: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: preloadPath,
       sandbox: false, // Overlay needs to live outside sandbox for some syscalls
     },
   });
@@ -46,7 +48,7 @@ async function createMainWindow() {
     height: 768,
     show: false, // Start hidden, show when ready
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: preloadPath,
       webviewTag: true,
     },
   });
