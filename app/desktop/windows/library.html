@@ -20,26 +20,31 @@
         <button id="nav-clear" title="Clear overlays" style="background:#ef4444; border:0; color:#fff; cursor:pointer; padding:6px 10px; border-radius:8px">Clear</button>
       </div>
     </div>
-    <!-- IMPORTANT: preload is our fixed bridge above -->
+    <!-- IMPORTANT: keep Library loaded; show/hide Store view so Library session persists -->
     <webview
       id="libview"
       src="https://icon-web-two.vercel.app/library"
       preload="./webview-preload.js"
-      
       partition="persist:iconlib"
-      style="position:fixed; top:42px; left:0; right:0; bottom:0; border:0;">
+      style="position:fixed; top:42px; left:0; right:0; bottom:0; border:0; display:block;">
+    </webview>
+    <webview
+      id="storeview"
+      src="about:blank"
+      preload="./webview-preload.js"
+      partition="persist:iconlib"
+      style="position:fixed; top:42px; left:0; right:0; bottom:0; border:0; display:none;">
     </webview>
 
     <script>
       const libview = document.getElementById('libview');
+      const storeview = document.getElementById('storeview');
       const brand = document.getElementById('brand');
 
       // Ensure we only attach this listener once.
-      if (!window.libraryListenerAttached) {
-        // The host renderer (this page) listens for IPC messages from the <webview> guest.
-        // The webview's own preload script sends this message.
-        libview.addEventListener('ipc-message', (event) => {
-          // GOAL:webview.single_ipc_message
+      function attachListeners(v){
+        if (!v || v.__iconAttached) return; v.__iconAttached = true;
+        v.addEventListener('ipc-message', (event) => {
           if (event.channel === 'icon:webview-sticker' && event.args?.[0]?.src) {
             const url = event.args?.[0]?.src;
             console.log('[icon] sticker from webview:', url);
@@ -50,8 +55,10 @@
             console.log('[icon] webview preload ready');
           }
         });
-        window.libraryListenerAttached = true;
+        v.addEventListener('did-navigate', (e) => { try { if (/\/login/.test(e.url||'')) window.icon?.clearOverlays?.(); } catch {} });
+        v.addEventListener('did-navigate-in-page', (e) => { try { if (/\/login/.test(e.url||'')) window.icon?.clearOverlays?.(); } catch {} });
       }
+      attachListeners(libview); attachListeners(storeview);
 
 
       libview.addEventListener('dom-ready', () => {
@@ -70,16 +77,19 @@
         } catch {}
       });
 
-      const to = (url) => { libview.loadURL(url); };
-      document.getElementById('nav-library')?.addEventListener('click', () => {
-        // Always load the Library app URL explicitly to avoid domain-relative 404s
-        try {
-          window.icon?.clearOverlays?.();
-          to('https://icon-web-two.vercel.app/library');
-          libview.focus();
-        } catch { /* fall back ignored */ }
-      });
-      document.getElementById('nav-store')?.addEventListener('click', () => { try { to('https://icon.coupons'); libview.focus(); } catch { window.api?.openExternal?.('https://icon.coupons'); } });
+      function showLibrary(){
+        storeview.style.display='none';
+        libview.style.display='block';
+        libview.focus();
+      }
+      function showStore(){
+        try { if (storeview.getURL?.() === '' || storeview.getURL?.() === 'about:blank') storeview.loadURL('https://icon.coupons'); } catch {}
+        libview.style.display='none';
+        storeview.style.display='block';
+        storeview.focus();
+      }
+      document.getElementById('nav-library')?.addEventListener('click', showLibrary);
+      document.getElementById('nav-store')?.addEventListener('click', showStore);
       document.getElementById('nav-hotkeys')?.addEventListener('click', () => { window.postMessage({type:'icon:show-hotkeys'}, '*'); });
       document.getElementById('nav-clear')?.addEventListener('click', () => window.icon?.clearOverlays?.());
     </script>
