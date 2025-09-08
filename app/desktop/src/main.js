@@ -48,8 +48,7 @@ function buildMenu() {
         {
             label: 'File',
             submenu: [
-                { label: 'Pin from clipboard', accelerator: 'CommandOrControl+Alt+Shift+V', click: function () { return electron_1.ipcMain.emit('overlay:pinClipboard'); } },
-                { type: 'separator' },
+                // Removed free pin-from-clipboard to enforce paid-only stickers
                 { label: 'Clear all stickers', accelerator: 'CommandOrControl+Alt+Shift+X', click: function () { return overlay.clearAll(); } },
                 { type: 'separator' },
                 { role: 'quit' },
@@ -152,7 +151,7 @@ electron_1.app.whenReady().then(function () {
     try {
         electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+X', function () { return overlay.clearAll(); });
         electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+H', function () { return showHotkeys(); });
-        electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+V', function () { return electron_1.ipcMain.emit('overlay:pinClipboard'); });
+        // Removed free pin-from-clipboard
         electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+P', function () { return electron_1.ipcMain.emit('overlay:party'); });
         electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+B', function () { return electron_1.ipcMain.emit('overlay:toggleBounce'); });
         electron_1.globalShortcut.register('CommandOrControl+Alt+Shift+R', function () { return electron_1.ipcMain.emit('overlay:rain', 24); });
@@ -171,6 +170,7 @@ electron_1.app.on('activate', function () { if (electron_1.BrowserWindow.getAllW
 /* ───────── IPC: overlay control ───────── */
 electron_1.ipcMain.handle('overlay:create', function (_e, id, url) { log('ipc overlay:create', id, url); return overlay.create(id, url); });
 electron_1.ipcMain.handle('overlay:clearAll', function () { return overlay.clearAll(); });
+electron_1.ipcMain.handle('overlay/clearAll', function () { return overlay.clearAll(); });
 // Provide app helpers expected by renderer
 electron_1.ipcMain.handle('app/version', function () { return electron_1.app.getVersion(); });
 electron_1.ipcMain.handle('app/openExternal', function (_e, url) { return electron_1.shell.openExternal(url); });
