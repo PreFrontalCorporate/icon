@@ -102,7 +102,7 @@
       document.getElementById('nav-library')?.addEventListener('click', showLibrary);
       document.getElementById('nav-store')?.addEventListener('click', showStore);
       document.getElementById('nav-hotkeys')?.addEventListener('click', () => { window.postMessage({type:'icon:show-hotkeys'}, '*'); });
-      document.getElementById('nav-clear')?.addEventListener('click', () => window.icon?.clearOverlays?.());
+      document.getElementById('nav-clear')?.addEventListener('click', () => { try { window.icon?.clearOverlays?.(); } catch {} try { window.api?.overlays?.clearAll?.(); } catch {} });
     </script>
   </body>
 </html>
