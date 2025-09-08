@@ -78,15 +78,26 @@
       });
 
       function showLibrary(){
-        storeview.style.display='none';
+        try { if (storeview.parentNode) storeview.remove(); } catch {}
         libview.style.display='block';
         libview.focus();
       }
       function showStore(){
-        try { if (storeview.getURL?.() === '' || storeview.getURL?.() === 'about:blank') storeview.loadURL('https://icon.coupons'); } catch {}
+        try {
+          if (!document.getElementById('storeview')) {
+            const s = document.createElement('webview');
+            s.id = 'storeview';
+            s.setAttribute('preload', './webview-preload.js');
+            s.setAttribute('partition', 'persist:iconlib');
+            s.style.cssText = 'position:fixed; top:42px; left:0; right:0; bottom:0; border:0; display:block;';
+            attachListeners(s);
+            document.body.appendChild(s);
+            s.src = 'https://icon.coupons';
+          }
+        } catch {}
         libview.style.display='none';
-        storeview.style.display='block';
-        storeview.focus();
+        const sref = document.getElementById('storeview');
+        if (sref) sref.style.display='block';
       }
       document.getElementById('nav-library')?.addEventListener('click', showLibrary);
       document.getElementById('nav-store')?.addEventListener('click', showStore);
