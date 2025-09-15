@@ -58,7 +58,7 @@ jobs:
           sudo apt-get install -y libfuse2 rpm build-essential fakeroot dpkg xz-utils p7zip-full zsync
 
       - name: Install deps (desktop)
-        run: pnpm --dir app/desktop install --frozen-lockfile
+        run: pnpm --dir app/desktop install --no-frozen-lockfile
 
       - name: Compile TypeScript
         run: pnpm --dir app/desktop run build
