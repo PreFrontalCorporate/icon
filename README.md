@@ -1,50 +1,39 @@
-## Getting Started (WSL 2)
+# icon Desktop • v2.0.5
 
-1. **Clone & install**
+**Pin stickers, memes, and images on top of any app.**  
+icon Desktop lets you click a sticker in the Library/Store and “pin” it as a floating, always-on-top overlay window you can move, resize, rotate, and clear with global hotkeys.
 
-```bash
-git clone git@github.com:prefrontalcorporate/icon.git ~/icon
-cd ~/icon && pnpm i
-Fix WSL permissions
-
-bash
-Copy
-Edit
-sudo chown -R $USER:$USER ~/icon ~/.local/share/pnpm ~/.vscode-server-insiders
-Dev targets
-
-bash
-Copy
-Edit
-pnpm dev -F web        # Next 14 PWA  → http://localhost:3000
-pnpm dev -F extension  # Chrome / FF extension with HMR
-pnpm dev -F desktop    # Electron overlay
-End-to-end tests
-
-bash
-Copy
-Edit
-pnpm playwright test   # runs across all three surfaces
-Release
-
-bash
-Copy
-Edit
-pnpm run build:catalog   # regenerate sticker manifests & CSV
-git tag v0.1.0 && git push --tags   # triggers release workflow
-ENV vars required: MULTIPASS_SECRET, STICKERS_KV, CHROME_* (extension publish), GH_TOKEN (Electron release).
-
-pgsql
-Copy
-Edit
+- **Platforms:** Windows, macOS, Linux  
+- **Tech:** Electron + Vite + TypeScript + pnpm  
+- **License:** MIT
 
 ---
 
-### Next actions
+## 🚀 Install (End users)
 
-1. Paste each file into its path, `git add`, commit, and push.
-2. Add the secrets listed in the workflows.
-3. Watch the **Actions** tab turn green—then you’re fully CI/CD-enabled.
+Grab the latest installers from **GitHub Releases** (Windows `.exe`, macOS `.dmg`/`.zip`, Linux `.AppImage`/`.deb`/`.rpm`).  
+File names follow:
 
-These code‐ready templates map one-to-one with Shopify, Cloudflare, Electron, Playwright, and GitHub-Actions best-practice examples, so you can drop them in without further boilerplate.
-::contentReference[oaicite:10]{index=10}
+- **Windows (x64):** `icon-Desktop-Setup-${version}-x64.exe` (NSIS) and a portable build
+- **macOS:** `icon Desktop-${version}.dmg` and `.zip`
+- **Linux:** `${name}-${version}.AppImage`, `.deb`, `.rpm`
+
+> Tip: On first launch, you’ll see the app window with a Library/Store toolbar. Click stickers/images to pin them as overlays.
+
+---
+
+## 🧑‍💻 Develop locally (pnpm)
+
+> This is a **pnpm workspace** monorepo. The desktop client lives in `app/desktop`.
+
+### Requirements
+- **Node.js 20.x**
+- **pnpm 9.x**
+- macOS/Windows/Linux build prerequisites for Electron (e.g., Xcode CLT on macOS, build tools on Linux)
+
+### Install & run (desktop app only)
+
+```bash
+# from repo root OR anywhere
+pnpm --dir app/desktop i
+pnpm --dir app/desktop dev
