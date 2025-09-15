@@ -9,6 +9,10 @@ electron_1.contextBridge.exposeInMainWorld('api', {
         clearAll: function () { return electron_1.ipcRenderer.invoke('overlay/clearAll'); },
         pinFromUrl: function (url) { return electron_1.ipcRenderer.invoke('overlay/pin', url); },
     },
+    browser: {
+        load: function (url) { return electron_1.ipcRenderer.invoke('view:load', url); },
+        show: function (which) { return electron_1.ipcRenderer.invoke('view:show', which); },
+    },
     openExternal: function (url) { return electron_1.ipcRenderer.invoke('app/openExternal', url); },
     showHotkeys: function () { return electron_1.ipcRenderer.invoke('app/hotkeys'); },
 });
@@ -28,7 +32,13 @@ Object.defineProperty(window, 'icon', {
                 return;
             // Unique id each time so multiple overlays from same image are allowed
             var id = 'url:' + Date.now() + ':' + Math.floor(Math.random() * 1e6);
-            electron_1.ipcRenderer.invoke('overlay:create', id, url);
+            try {
+                console.log('[icon preload] invoke overlay:create', id, url);
+                electron_1.ipcRenderer.invoke('overlay:create', id, url).catch(function (e) { return console.error('[icon preload] overlay:create error', e); });
+            }
+            catch (e) {
+                console.error('[icon preload] addSticker exception', e);
+            }
         },
         clearOverlays: function () { return electron_1.ipcRenderer.invoke('overlay:clearAll'); },
         onOverlayCount: function (_fn) { return function () { }; },

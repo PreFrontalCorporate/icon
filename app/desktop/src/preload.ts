@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld('api', {
     clearAll: () => ipcRenderer.invoke('overlay/clearAll') as Promise<number>,
     pinFromUrl: (url: string) => ipcRenderer.invoke('overlay/pin', url) as Promise<number>,
   },
+  browser: {
+    load: (url: string) => ipcRenderer.invoke('view:load', url) as Promise<void>,
+    show: (which: 'library'|'store') => ipcRenderer.invoke('view:show', which) as Promise<void>,
+    hotkeys: () => ipcRenderer.invoke('app/hotkeys') as Promise<void>,
+  },
   openExternal: (url: string) => ipcRenderer.invoke('app/openExternal', url) as Promise<void>,
   onToggleOverlayPanel: (fn: () => void) => {
     const ch = 'overlay:panel/toggle';
@@ -30,9 +35,9 @@ contextBridge.exposeInMainWorld('desktop', {
 // Minimal compat for wrapper’s script:
 Object.defineProperty(window, 'icon', {
   value: {
-    addSticker: (payload: { url?: string; src?: string }) => {
-      const url = payload?.url || payload?.src;
-      if (url) (window as any).api?.overlays?.pinFromUrl?.(url);
+    // Match the API expected by the web library (library.tsx)
+    pinSticker: (src: string, _opts?: unknown) => {
+      if (src) (window as any).api?.overlays?.pinFromUrl?.(src);
     },
     clearOverlays: () => (window as any).api?.overlays?.clearAll?.(),
     onOverlayCount: (fn: (n:number)=>void) => (window as any).api?.onOverlayCount?.(fn),

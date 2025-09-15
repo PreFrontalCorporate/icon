@@ -1,9 +1,8 @@
 // scripts/desktop/write-dist-pkg.cjs
 // Postbuild fixer for Electron packaging:
 // - rename preload.js -> preload.cjs  (CJS for sandbox/preload)
-// - rename main.js    -> main.mjs     (explicit ESM)
-// - create entry.cjs bootstrap that dynamic-imports main.mjs
-// - write a small dist/package.json set to commonjs (mjs still loads as ESM)
+// - create entry.cjs bootstrap that requires the compiled CJS main at dist/src/main.js
+// - write a small dist/package.json set to commonjs
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -34,29 +33,20 @@ if (!exists(dist)) {
 // 1) preload.js -> preload.cjs
 safeRename(path.join(dist, 'preload.js'), path.join(dist, 'preload.cjs'), 'preload.js → preload.cjs');
 
-// 2) main.js -> main.mjs (ESM)
-safeRename(path.join(dist, 'main.js'), path.join(dist, 'main.mjs'), 'main.js → main.mjs');
-
-// 3) entry.cjs bootstrap that loads ESM main.mjs
+// 2) Create entry.cjs that loads the compiled CJS main at dist/src/main.js
 const entryCjs = `
-/* Electron CJS bootstrap -> ESM main */
-const path = require('node:path');
-const { pathToFileURL } = require('node:url');
-
-(async () => {
-  try {
-    const url = pathToFileURL(path.join(__dirname, 'main.mjs')).href;
-    await import(url);
-  } catch (err) {
-    console.error('[bootstrap] failed to import main.mjs', err);
-    throw err;
-  }
-})();
+/* Electron CJS bootstrap -> CJS main */
+try {
+  require('./src/main.js');
+} catch (err) {
+  console.error('[bootstrap] failed to require ./src/main.js', err);
+  throw err;
+}
 `.trimStart();
 
 write(path.join(dist, 'entry.cjs'), entryCjs, 'dist/entry.cjs bootstrap');
 
-// 4) Make dist default to commonjs (mjs stays ESM regardless)
+// 3) Make dist default to commonjs
 const distPkg = {
   type: 'commonjs'
 };

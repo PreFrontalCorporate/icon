@@ -1,8 +1,8 @@
 {
   "name": "icon-desktop",
-  "productName": "Icon Desktop",
-  "version": "1.0.138",
-  "description": "Overlay sticker client for Icon Suite – pin your stickers on top of any app.",
+  "productName": "icon Desktop",
+  "version": "2.0.0",
+  "description": "Overlay sticker client for Icon Suite - pin your stickers on top of any app.",
   "license": "MIT",
   "homepage": "https://github.com/PreFrontalCorporate/icon",
   "repository": {
@@ -17,12 +17,15 @@
   "main": "dist/entry.cjs",
   "scripts": {
     "dev": "vite dev --config vite.config.ts & electronmon ./src/main.js --ignore=packages/stickers",
+    "icons:gen": "node scripts/gen-icons.js",
     "build:main": "tsc -p tsconfig.main.json",
     "build:preload": "tsc -p tsconfig.preload.json",
     "build:renderer": "vite build --config vite.config.ts",
     "build": "pnpm run build:main && pnpm run build:preload && pnpm run build:renderer",
     "postbuild": "node ../../scripts/desktop/write-dist-pkg.cjs",
     "dist": "pnpm run build && electron-builder",
+    "dist:portable": "pnpm run build && electron-builder --win portable --x64",
+    "dist:win64": "pnpm run build && electron-builder --win nsis --x64",
     "test:smoke": "node scripts/smoke-sticker-bridge.js"
   },
   "dependencies": {
@@ -30,6 +33,7 @@
     "electron-store": "^9.0.0",
     "electron-updater": "^5.3.0",
     "fast-glob": "^3.3.2",
+    "@google-cloud/firestore": "^7.7.0",
     "sanitize-filename": "^1.6.3"
   },
   "devDependencies": {
@@ -40,20 +44,29 @@
     "jsdom": "^24.0.0",
     "sinon": "^17.0.1",
     "typescript": "^5.4.4",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "png2icons": "^2.0.1"
   },
   "build": {
+    "directories": {
+      "output": "release"
+    },
+    "compression": "store",
     "asar": true,
     "asarUnpack": [
       "dist/preload.cjs"
     ],
     "files": [
-      "dist/**/*",
-      "windows/**/*",
-      "build/icon.*",
-      "packages/stickers/**/*"
+      "dist/entry.cjs",
+      "dist/preload.cjs",
+      "dist/package.json",
+      "dist/src/**",
+      "dist/renderer/**",
+      "windows/**",
+      "build/icon.*"
     ],
     "mac": {
+      "icon": "build/icon.icns",
       "target": [
         "dmg",
         "zip"
@@ -61,25 +74,22 @@
       "category": "public.app-category.graphics-design"
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64",
-            "ia32",
-            "arm64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
       ],
       "publisherName": "PreFrontal Corporate"
     },
+    "nsis": {
+      "artifactName": "icon-Desktop-Setup-${version}-${arch}.exe",
+      "oneClick": true,
+      "perMachine": false,
+      "unicode": true,
+      "warningsAsErrors": false
+    },
     "linux": {
+      "icon": "build/icon.png",
       "maintainer": "PreFrontal Corporate <support@cbb.homes>",
       "category": "Utility",
       "target": [

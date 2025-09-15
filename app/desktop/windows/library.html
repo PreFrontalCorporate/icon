@@ -9,8 +9,14 @@
     </style>
   </head>
   <body>
-    <div id="brand" style="position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; color:#ddd; font:700 44px/1 system-ui, -apple-system, 'Segoe UI', Roboto; text-transform:none; letter-spacing:.5px;">icon</div>
+    <div id="brand" style="position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; color:#ddd; text-transform:none; letter-spacing:.5px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:10px">
+        <img src="../build/icon.png" alt="Icon" style="width:92px; height:92px; border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,.35)"/>
+        <div style="font:700 32px/1.1 system-ui, -apple-system, 'Segoe UI', Roboto">icon</div>
+      </div>
+    </div>
     <div id="toolbar" style="position:fixed; top:0; left:0; right:0; height:42px; display:flex; align-items:center; gap:10px; padding:0 10px; background:rgba(17,17,17,.85); color:#fff; z-index:20; -webkit-user-select:none;">
+      <img src="../build/icon.png" width="18" height="18" alt="Icon" style="border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,.25)"/>
       <div style="font:600 14px system-ui; letter-spacing:.3px">icon</div>
       <div style="opacity:.65; margin-left:6px">·</div>
       <button id="nav-library" style="background:transparent; border:0; color:#fff; opacity:.9; cursor:pointer; padding:6px 8px; border-radius:8px">Library</button>
@@ -20,89 +26,22 @@
         <button id="nav-clear" title="Clear overlays" style="background:#ef4444; border:0; color:#fff; cursor:pointer; padding:6px 10px; border-radius:8px">Clear</button>
       </div>
     </div>
-    <!-- IMPORTANT: keep Library loaded; show/hide Store view so Library session persists -->
-    <webview
-      id="libview"
-      src="https://icon-web-two.vercel.app/library"
-      preload="./webview-preload.js"
-      partition="persist:iconlib"
-      style="position:fixed; top:42px; left:0; right:0; bottom:0; border:0; display:block;">
-    </webview>
-    <webview
-      id="storeview"
-      src="about:blank"
-      preload="./webview-preload.js"
-      partition="persist:iconlib"
-      style="position:fixed; top:42px; left:0; right:0; bottom:0; border:0; display:none;">
-    </webview>
+    <!-- BrowserView now renders the content; webview kept hidden as a fallback placeholder -->
+    <webview id="libview" src="about:blank" style="display:none"></webview>
 
     <script>
       const libview = document.getElementById('libview');
-      const storeview = document.getElementById('storeview');
       const brand = document.getElementById('brand');
+      document.addEventListener('DOMContentLoaded', () => {
+        try { if (brand) brand.style.display = 'none'; } catch {}
 
-      // Ensure we only attach this listener once.
-      function attachListeners(v){
-        if (!v || v.__iconAttached) return; v.__iconAttached = true;
-        v.addEventListener('ipc-message', (event) => {
-          if (event.channel === 'icon:webview-sticker' && event.args?.[0]?.src) {
-            const url = event.args?.[0]?.src;
-            console.log('[icon] sticker from webview:', url);
-            try { window.icon?.addSticker?.({ src: url }); } catch (e) { console.warn('window.icon.addSticker failed', e); }
-            try { window.api?.overlays?.pinFromUrl?.(url); } catch (e) { console.warn('api.overlays.pinFromUrl failed', e); }
-          }
-          if (event.channel === 'icon:webview-ready') {
-            console.log('[icon] webview preload ready');
-          }
-        });
-        v.addEventListener('did-navigate', (e) => { try { if (/\/login/.test(e.url||'')) window.icon?.clearOverlays?.(); } catch {} });
-        v.addEventListener('did-navigate-in-page', (e) => { try { if (/\/login/.test(e.url||'')) window.icon?.clearOverlays?.(); } catch {} });
-      }
-      attachListeners(libview); attachListeners(storeview);
-
-
-      libview.addEventListener('dom-ready', () => {
-        // The webview is ready, give it focus.
-        libview.focus();
-        if (brand) brand.style.display = 'none';
+        function showLibrary(){ try { window.api?.browser?.show?.('library'); } catch {} }
+        function showStore(){ try { window.api?.browser?.show?.('store'); } catch {} }
+        document.getElementById('nav-library')?.addEventListener('click', showLibrary);
+        document.getElementById('nav-store')?.addEventListener('click', showStore);
+        document.getElementById('nav-hotkeys')?.addEventListener('click', () => { try { window.api?.browser?.hotkeys?.(); } catch(e) { console.error('hotkeys call failed', e); } });
+        document.getElementById('nav-clear')?.addEventListener('click', () => { try { window.icon?.clearOverlays?.(); } catch {} try { window.api?.overlays?.clearAll?.(); } catch {} });
       });
-      libview.addEventListener('did-navigate', (e) => {
-        try {
-          if (/\/login/.test(e.url || '')) { window.icon?.clearOverlays?.(); }
-        } catch {}
-      });
-      libview.addEventListener('did-navigate-in-page', (e) => {
-        try {
-          if (/\/login/.test(e.url || '')) { window.icon?.clearOverlays?.(); }
-        } catch {}
-      });
-
-      function showLibrary(){
-        try { if (storeview.parentNode) storeview.remove(); } catch {}
-        libview.style.display='block';
-        libview.focus();
-      }
-      function showStore(){
-        try {
-          if (!document.getElementById('storeview')) {
-            const s = document.createElement('webview');
-            s.id = 'storeview';
-            s.setAttribute('preload', './webview-preload.js');
-            s.setAttribute('partition', 'persist:iconlib');
-            s.style.cssText = 'position:fixed; top:42px; left:0; right:0; bottom:0; border:0; display:block;';
-            attachListeners(s);
-            document.body.appendChild(s);
-            s.src = 'https://icon.coupons';
-          }
-        } catch {}
-        libview.style.display='none';
-        const sref = document.getElementById('storeview');
-        if (sref) sref.style.display='block';
-      }
-      document.getElementById('nav-library')?.addEventListener('click', showLibrary);
-      document.getElementById('nav-store')?.addEventListener('click', showStore);
-      document.getElementById('nav-hotkeys')?.addEventListener('click', () => { window.postMessage({type:'icon:show-hotkeys'}, '*'); });
-      document.getElementById('nav-clear')?.addEventListener('click', () => { try { window.icon?.clearOverlays?.(); } catch {} try { window.api?.overlays?.clearAll?.(); } catch {} });
     </script>
   </body>
 </html>

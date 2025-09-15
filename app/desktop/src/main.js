@@ -35,6 +35,9 @@ function resolvePreload() {
     return node_fs_1.existsSync(cjs) ? cjs : js;
 }
 var mainWin = null;
+var view = null; // legacy single view (used at boot)
+var viewLib = null;
+var viewStore = null;
 // lazy import to avoid circular import during transpile
 var overlay = {
     create: function (id, url) { return Promise.resolve().then(function () { return require('./ipc/overlay'); }).then(function (m) { return m.createOverlay(id, url); }); },
@@ -95,12 +98,17 @@ function showHotkeys() {
         skipTaskbar: true,
         webPreferences: { sandbox: false }
     });
-    hotkeyWin.loadURL('data:text/html,' + encodeURIComponent("\n    <meta charset=\\'utf-8\\'>\n    <style>html,body{margin:0} .box{position:fixed;inset:0;margin:auto;width:400px;height:240px;background:rgba(20,20,20,.92);color:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.45);font:13px system-ui;padding:16px} h2{margin:0 0 8px 0;font:600 16px system-ui} code{background:#333;padding:2px 6px;border-radius:6px}</style>\n    <div class=box>\n      <h2>Keyboard shortcuts</h2>\n      <div><code>Ctrl+Alt+Shift+V</code> Pin from clipboard (image URL)</div>\n      <div><code>Ctrl+Alt+Shift+X</code> Clear all overlays</div>\n      <div><code>Ctrl+Alt+Shift+B</code> Toggle bounce all</div>\n      <div><code>Ctrl+Alt+Shift+R</code> Rain 24 overlays</div>\n      <div><code>Ctrl+Alt+Shift+P</code> Party mode (random fx)</div>\n      <div style=\"opacity:.75;margin-top:10px\">Overlay window: R rotate • B bounce • S chime • Esc close • Double‑click close</div>\n      <div style=\"margin-top:14px;opacity:.7\">Press this hotkey again to close.</div>\n    </div>\n  "));
+    hotkeyWin.loadURL('data:text/html,' + encodeURIComponent("\n    <meta charset=\\'utf-8\\'>\n    <style>html,body{margin:0} .box{position:fixed;inset:0;margin:auto;width:420px;height:220px;background:rgba(20,20,20,.92);color:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.45);font:13px system-ui;padding:16px} h2{margin:0 0 8px 0;font:600 16px system-ui} code{background:#333;padding:2px 6px;border-radius:6px}</style>\n    <div class=box>\n      <h2>Keyboard shortcuts</h2>\n      <div><code>Ctrl+Alt+Shift+X</code> Clear all overlays</div>\n      <div><code>Ctrl+Alt+Shift+B</code> Toggle bounce all</div>\n      <div><code>Ctrl+Alt+Shift+R</code> Burst 24 overlays (auto-spread)</div>\n      <div><code>Ctrl+Alt+Shift+P</code> Party mode (random fx)</div>\n      <div><code>Ctrl+Alt+Shift+H</code> Toggle this window</div>\n      <div style=\"opacity:.75;margin-top:10px\">Overlay window: R rotate • B bounce • S chime • Esc close • Double‑click close</div>\n      <div style=\"margin-top:14px;opacity:.7\">Press this hotkey again to close.</div>\n    </div>\n  "));
     try { hotkeyWin.setVisibleOnAllWorkspaces(true); }
     catch (_b) { }
 }
 function createMainWindow() {
     var preloadPath = resolvePreload();
+    // Prefer .ico on Windows, fall back to .png for dev and other OSes
+    var buildDir = node_path_1.join(__dirname, '../build');
+    var icoPath = node_path_1.join(buildDir, 'icon.ico');
+    var pngPath = node_path_1.join(buildDir, 'icon.png');
+    var iconPath = (function(){ try { if (node_fs_1.existsSync(icoPath)) return icoPath; if (node_fs_1.existsSync(pngPath)) return pngPath; } catch(_) {} return undefined; })();
     mainWin = new electron_1.BrowserWindow({
         width: 1024,
         height: 720,
@@ -109,6 +117,7 @@ function createMainWindow() {
         backgroundColor: '#151515',
         autoHideMenuBar: false,
         show: true,
+        icon: iconPath,
         webPreferences: {
             preload: preloadPath,
             contextIsolation: true,
@@ -144,6 +153,8 @@ function createMainWindow() {
         }
         catch (_a) { }
     }
+    // Keep a BrowserView alternative to <webview> to avoid compositor issues
+    try { createOrAttachBrowserView(); } catch (e) { log('createOrAttachBrowserView error', e); }
 }
 electron_1.app.whenReady().then(function () {
     createMainWindow();
@@ -175,6 +186,31 @@ electron_1.ipcMain.handle('overlay/clearAll', function () { return overlay.clear
 electron_1.ipcMain.handle('app/version', function () { return electron_1.app.getVersion(); });
 electron_1.ipcMain.handle('app/openExternal', function (_e, url) { return electron_1.shell.openExternal(url); });
 electron_1.ipcMain.handle('app/hotkeys', function () { showHotkeys(); });
+electron_1.ipcMain.handle('view:load', function (_e, url) { try { log('view:load', url); createOrAttachBrowserView(); view.webContents.loadURL(url).catch(function (e) { return log('view.loadURL threw', e); }); } catch (e) { log('view:load error', e); } });
+electron_1.ipcMain.handle('view:show', function (_e, which) {
+    try {
+        if (which === 'library')
+            return showLibraryView();
+        if (which === 'store')
+            return showStoreView();
+    }
+    catch (e) {
+        log('view:show error', e);
+    }
+});
+electron_1.ipcMain.on('icon:webview-ready', function () { return log('icon:webview-ready from BrowserView'); });
+electron_1.ipcMain.on('icon:dbg', function (_e, payload) { try { log('icon:dbg', JSON.stringify(payload)); } catch (_a) { } });
+// When running content in a BrowserView, the preload uses ipcRenderer.send
+// to talk to main. Handle that and forward to overlays.
+electron_1.ipcMain.on('icon:webview-sticker', function (_e, payload) {
+    try {
+        var url = (payload && (payload.url || payload.src)) || '';
+        log('ipc icon:webview-sticker', url);
+        if (url)
+            overlay.create('url:' + Date.now() + ':' + Math.floor(Math.random() * 1e6), url);
+    }
+    catch (e) { log('ipc icon:webview-sticker error', e); }
+});
 // Compatibility: support overlay/pin used by TS preload
 electron_1.ipcMain.handle('overlay/pin', function (_e, url) { log('ipc overlay:pin', url); return overlay.create('url:' + Date.now() + ':' + Math.floor(Math.random()*1e6), url); });
 // Extras
@@ -192,3 +228,132 @@ electron_1.ipcMain.on('overlay:pinClipboard', function () {
 electron_1.ipcMain.on('overlay:rain', function (_e, n) { return overlay.rain(typeof n === 'number' ? n : 20); });
 electron_1.ipcMain.on('overlay:toggleBounce', function () { return overlay.toggleBounceAll(); });
 electron_1.ipcMain.on('overlay:party', function () { return overlay.party(); });
+
+/* ───────── BrowserView support (instead of <webview>) ───────── */
+function ensureViewBounds(v) {
+    if (!mainWin || !v)
+        return;
+    try {
+        var _a = mainWin.getContentSize(), w = _a[0], h = _a[1];
+        v.setBounds({ x: 0, y: 42, width: Math.max(0, w), height: Math.max(0, h - 42) });
+        v.setAutoResize({ width: true, height: true });
+    }
+    catch (_b) { }
+}
+function setupViewHandlers(v) {
+    try {
+        v.webContents.on('ipc-message', function (_event, channel, args) {
+            if (channel === 'icon:webview-sticker') {
+                try {
+                    var payload = (args && args[0]) || args || {};
+                    var url_1 = payload.url || payload.src;
+                    if (url_1)
+                        overlay.create('url:' + Date.now() + ':' + Math.floor(Math.random() * 1e6), url_1);
+                }
+                catch (e) { log('view sticker err', e); }
+            }
+            if (channel === 'icon:webview-ready') {
+                try { log('BrowserView preload ready'); } catch (_a) { }
+            }
+        });
+        function injectClickHelper() {
+            try {
+                v.webContents.executeJavaScript("typeof window.icon + '|' + typeof window.desktop + '|' + (window.desktop && typeof window.desktop.addSticker)", true)
+                    .then(function (res) { return log('BV env check', res); })
+                    .catch(function (e) { return log('BV env check error', e); });
+                // Inject a light in-page helper that sends the clicked image URL to our bridge
+                var inject = "(function(){try{if(window.__iconInject) return; window.__iconInject=true;" +
+                    "function extr(n){var el=n; for(var i=0;el&&i<8;i++,el=el.parentElement){" +
+                    " if(el.tagName==='IMG'&&el.src) return el.src;" +
+                    " var s=el.querySelector&&el.querySelector('source[srcset]'); if(s&&s.srcset){var f=s.srcset.split(',')[0].trim().split(' ')[0]; if(f) return f;}" +
+                    " var a=el.closest&&el.closest('a[href]'); if(a){var h=a.getAttribute('href')||''; if(/\\.(png|jpe?g|gif|webp|svg)(\\?|#|$)/i.test(h)) return h;}" +
+                    " var bg=(el instanceof Element)? getComputedStyle(el).backgroundImage||'':''; var m=bg.match(/url\\([\"']?(.*?)[\"']?\\)/i); if(m&&m[1]) return m[1]; } return null;}" +
+                    "function send(u){ try{ if(window.icon&&typeof window.icon.addSticker==='function'){ window.icon.addSticker({src:u}); return true;} }catch(_){} try{ if(window.desktop&&typeof window.desktop.addSticker==='function'){ window.desktop.addSticker({src:u}); return true;} }catch(_){} try{ window.postMessage({__iconSticker:u},'*'); return true;}catch(_){} return false;}" +
+                    "function handler(e){ try{ var u=extr(e.target); if(u){ send(u); try{e.stopImmediatePropagation();}catch(_){} try{e.stopPropagation();}catch(_){} if(e.cancelable) try{e.preventDefault();}catch(_){} } }catch(_){} }" +
+                    "['click','mousedown','mouseup','pointerdown','pointerup','touchstart','contextmenu'].forEach(function(t){ window.addEventListener(t, handler, {capture:true,passive:false}); document.addEventListener(t, handler, {capture:true,passive:false}); });" +
+                    "}catch(e){console.warn('icon inject error',e);}})();";
+                v.webContents.executeJavaScript(inject, true).catch(function (e) { return log('inject error', e); });
+            }
+            catch (e) { log('did-finish-load eval error', e); }
+        }
+        v.webContents.on('did-finish-load', injectClickHelper);
+        v.webContents.on('did-navigate', function (_e, url) { try { if (/\/login/.test(url || '')) overlay.clearAll(); } catch (_a) { } });
+        v.webContents.on('did-navigate-in-page', function (_e, url) { try { if (/\/login/.test(url || '')) overlay.clearAll(); } catch (_a) { } try { injectClickHelper(); } catch (_b) { } });
+    }
+    catch (_c) { }
+}
+function ensureLibView() {
+    if (!mainWin)
+        return;
+    if (!viewLib) {
+        viewLib = new electron_1.BrowserView({ webPreferences: {
+                preload: node_path_1.join(__dirname, '../windows/webview-preload.js'),
+                sandbox: false,
+                contextIsolation: false,
+                nodeIntegration: false,
+                partition: 'persist:iconlib',
+            } });
+        mainWin.addBrowserView(viewLib);
+        ensureViewBounds(viewLib);
+        setupViewHandlers(viewLib);
+        try { viewLib.webContents.loadURL('https://icon-web-two.vercel.app/library'); } catch (_a) { }
+    }
+}
+function ensureStoreView() {
+    if (!mainWin)
+        return;
+    if (!viewStore) {
+        viewStore = new electron_1.BrowserView({ webPreferences: {
+                preload: node_path_1.join(__dirname, '../windows/webview-preload.js'),
+                sandbox: false,
+                contextIsolation: false,
+                nodeIntegration: false,
+                partition: 'persist:iconlib',
+            } });
+        mainWin.addBrowserView(viewStore);
+        ensureViewBounds(viewStore);
+        setupViewHandlers(viewStore);
+        try { viewStore.webContents.loadURL('https://icon.coupons'); } catch (_b) { }
+    }
+}
+function showLibraryView() {
+    ensureLibView();
+    try {
+        if (viewStore)
+            mainWin.setTopBrowserView(viewLib);
+    }
+    catch (_a) { }
+    ensureViewBounds(viewLib);
+}
+function showStoreView() {
+    ensureStoreView();
+    try {
+        if (viewStore)
+            mainWin.setTopBrowserView(viewStore);
+    }
+    catch (_a) { }
+    ensureViewBounds(viewStore);
+}
+function createOrAttachBrowserView() {
+    if (!mainWin)
+        return;
+    if (!view) {
+        view = new electron_1.BrowserView({ webPreferences: {
+                preload: node_path_1.join(__dirname, '../windows/webview-preload.js'),
+                sandbox: false,
+                contextIsolation: false,
+                nodeIntegration: false,
+                partition: 'persist:iconlib',
+            } });
+        mainWin.setBrowserView(view);
+        const resize = function () { ensureViewBounds(view); ensureViewBounds(viewLib); ensureViewBounds(viewStore); };
+        resize();
+        try { mainWin.on('resize', resize); mainWin.on('ready-to-show', resize); } catch (_c) { }
+        // Forward sticker messages directly from the BrowserView preload
+        try { setupViewHandlers(view); } catch (_d) { }
+        // Load the library by default
+        try { log('BrowserView load library'); view.webContents.loadURL('https://icon-web-two.vercel.app/library'); } catch (_e) { }
+        // Treat this initial view as the persistent Library view
+        try { if (!viewLib) viewLib = view; } catch (_f) { }
+    }
+}
