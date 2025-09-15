@@ -1,0 +1,108 @@
+   0 name: "Desktop build & release"
+   1 
+   2 on:
+   3   push:
+   4     tags:
+   5       - 'v*.*.*'
+   6 
+   7 permissions:
+   8   contents: write
+   9   packages: write
+  10 
+  11 env:
+  12   ELECTRON_VERSION: 29.4.6
+  13   PNPM_VERSION: 9
+  14   CSC_IDENTITY_AUTO_DISCOVERY: "false" # don't try to codesign
+  15   USE_HARD_LINKS: "false"              # faster/safer on CI
+  16 
+  17 jobs:
+  18   build:
+  19     runs-on: ${{ matrix.os }}
+  20     strategy:
+  21       matrix:
+  22         os: [ubuntu-latest, windows-latest, macos-latest]
+  23 
+  24     steps:
+  25       - name: Checkout
+  26         uses: actions/checkout@v4
+  27         with:
+  28           fetch-depth: 0
+  29 
+  30       - name: Setup pnpm
+  31         uses: pnpm/action-setup@v4
+  32         with:
+  33           version: ${{ env.PNPM_VERSION }}
+  34 
+  35       - name: Setup Node
+  36         uses: actions/setup-node@v4
+  37         with:
+  38           node-version: 20
+  39           cache: pnpm
+  40 
+  41       - name: pnpm store cache
+  42         uses: actions/cache@v4
+  43         with:
+  44           path: ~/.pnpm-store
+  45           key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+  46 
+  47       - name: electron cache
+  48         uses: actions/cache@v4
+  49         with:
+  50           path: ~/.cache/electron
+  51           key: ${{ runner.os }}-electron-${{ env.ELECTRON_VERSION }}
+  52 
+  53       - name: Linux build deps
+  54       # only needed on Linux to build AppImage/RPM/DEB
+  55         if: runner.os == 'Linux'
+  56         run: |
+  57           sudo apt-get update
+  58           sudo apt-get install -y libfuse2 rpm build-essential fakeroot dpkg
+  59 
+  60       - name: Install deps (desktop)
+  61         run: pnpm --dir app/desktop install --frozen-lockfile
+  62 
+  63       - name: Compile TypeScript
+  64         run: pnpm --dir app/desktop run build
+  65 
+  66       - name: Sync version from tag
+  67         shell: bash
+  68         run: |
+  69           VERSION="${GITHUB_REF_NAME#v}"
+  70           node -e "const fs=require('fs');const p='app/desktop/package.json';const j=JSON.parse(fs.readFileSync(p));j.version='${VERSION}';fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('package.json.version =', j.version)"
+  71 
+  72       - name: Verify GH_TOKEN present
+  73         if: runner.os == 'Windows'
+  74         shell: bash
+  75         env:
+  76           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  77         run: |
+  78           echo "token_length=$(printf %s "$GH_TOKEN" | wc -c)"
+  79 
+  80       - name: Build Windows installer & publish release
+  81         if: runner.os == 'Windows'
+  82         env:
+  83           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  84           DEBUG: electron-builder
+  85         run: pnpm --dir app/desktop run dist:win64 -- --publish always
+  86 
+  87       - name: Build (no publish) on Linux
+  88         if: runner.os == 'Linux'
+  89         env:
+  90           DEBUG: electron-builder
+  91         run: pnpm --dir app/desktop run dist -- --publish never
+  92 
+  93       - name: Skip macOS publish (no codesign configured)
+  94         if: runner.os == 'macOS'
+  95         run: echo "macOS build skipped for publish"
+  96 
+  97       # Optional but handy: keep CI artifacts too
+  98       - name: Upload installers as workflow artifacts
+  99         if: always()
+ 100         uses: actions/upload-artifact@v4
+ 101         with:
+ 102           name: installers-${{ runner.os }}
+ 103           path: |
+ 104             app/desktop/dist/**
+ 105             app/desktop/release/**   # whichever your electron-builder outputs to
+ 106           if-no-files-found: ignore
+ 107 

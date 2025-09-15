@@ -29,7 +29,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
@@ -70,10 +70,20 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           node -e "const fs=require('fs');const p='app/desktop/package.json';const j=JSON.parse(fs.readFileSync(p));j.version='${VERSION}';fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('package.json.version =', j.version)"
 
-      - name: Build installers & publish release
+      - name: Verify GH_TOKEN present
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "GH_TOKEN length: $(printf %s "$GH_TOKEN" | wc -c)"
+
+      - name: Build installers & publish release (all OS)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: electron-builder
         run: pnpm --dir app/desktop run dist -- --publish always
+
+      # macOS and Linux publish are included above. Codesigning is disabled via env.
 
       # Optional but handy: keep CI artifacts too
       - name: Upload installers as workflow artifacts
