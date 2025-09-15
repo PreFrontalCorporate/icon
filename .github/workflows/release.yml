@@ -12,103 +12,6 @@ permissions:
 env:
   ELECTRON_VERSION: 29.4.6
   PNPM_VERSION: 9
-  CSC_IDENTITY_AUTO_DISCOVERY: "false" # don't try to codesign
-  USE_HARD_LINKS: "false"              # faster/safer on CI
-
-jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: pnpm store cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: electron cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/electron
-          key: ${{ runner.os }}-electron-${{ env.ELECTRON_VERSION }}
-
-      - name: Linux build deps
-      # only needed on Linux to build AppImage/RPM/DEB
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libfuse2 rpm build-essential fakeroot dpkg
-
-      - name: Install deps (desktop)
-        run: pnpm --dir app/desktop install --frozen-lockfile
-
-      - name: Compile TypeScript
-        run: pnpm --dir app/desktop run build
-
-      - name: Sync version from tag
-        shell: bash
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          node -e "const fs=require('fs');const p='app/desktop/package.json';const j=JSON.parse(fs.readFileSync(p));j.version='${VERSION}';fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('package.json.version =', j.version)"
-
-      - name: Verify GH_TOKEN present
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "GH_TOKEN length: $(printf %s "$GH_TOKEN" | wc -c)"
-
-      - name: Build installers & publish release (all OS)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEBUG: electron-builder
-        run: pnpm --dir app/desktop run dist -- --publish always
-
-      # macOS and Linux publish are included above. Codesigning is disabled via env.
-
-      # Optional but handy: keep CI artifacts too
-      - name: Upload installers as workflow artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: installers-${{ runner.os }}
-          path: |
-            app/desktop/dist/**
-            app/desktop/release/**   # whichever your electron-builder outputs to
-          if-no-files-found: ignore
-name: "Desktop build & release"
-
-on:
-  push:
-    tags:
-      - 'v*.*.*'
-
-permissions:
-  contents: write
-  packages: write
-
-env:
-  ELECTRON_VERSION: 29.4.6
-  PNPM_VERSION: 9
   CSC_IDENTITY_AUTO_DISCOVERY: "false" # don't try to codesign on macOS CI
   USE_HARD_LINKS: "false"              # safer on CI
 
@@ -203,3 +106,4 @@ jobs:
             app/desktop/dist/**
             app/desktop/release/**
           if-no-files-found: ignore
+
