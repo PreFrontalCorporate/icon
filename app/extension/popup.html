@@ -3,12 +3,37 @@
 <head>
   <meta charset="utf-8" />
   <title>Icon Stickers</title>
+  <style>
+    body { font: 13px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 10px; }
+    h1 { font-size: 14px; margin: 0 0 8px; }
+    .row { display:flex; gap:6px; align-items:center; margin: 6px 0; }
+    input[type="text"]{ width: 220px; }
+    button { padding: 6px 10px; }
+    .muted { color:#666 }
+  </style>
   <script src="popup.js"></script>
-</head>
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'none';">
+  </head>
 <body>
-  <h1>Icon Stickers</h1>
-  <input id="token" placeholder="Paste Multipass token" size="36" />
-  <button id="save">Verify</button>
-  <p id="status"></p>
+  <h1>Icon Stickers</h1>
+  <div class="row">
+    <input id="token" type="text" placeholder="Paste Multipass token" />
+    <button id="save">Verify</button>
+  </div>
+  <div class="row">
+    <button id="open-store">Open Store</button>
+    <button id="open-library">Open Library</button>
+  </div>
+  <div class="row">
+    <input id="overlay-url" type="text" placeholder="Image URL" />
+    <button id="overlay-btn">Overlay</button>
+  </div>
+  <div class="row">
+    <button id="clear">Clear</button>
+    <button id="party">Party</button>
+    <button id="rain">Rain</button>
+  </div>
+  <p id="status" class="muted"></p>
+  <p class="muted">Tip: Right‑click an image → “Overlay this image”.</p>
 </body>
 </html>

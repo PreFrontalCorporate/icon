@@ -1,13 +1,27 @@
 {
   "manifest_version": 3,
   "name": "Icon Stickers",
-  "version": "0.1.0",
-  "description": "Bring your purchased stickers onto any webpage.",
-  "action": { "default_popup": "popup.html" },
-  "background": { "service_worker": "background.js" },
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": ["https://icon.cbb.homes/*"],
-  "web_accessible_resources": [
-    { "resources": ["stickers/*"], "matches": ["<all_urls>"] }
+  "version": "0.2.0",
+  "description": "Overlay your Icon memes on any page."
+  ,"action": { "default_popup": "popup.html" }
+  ,"background": { "service_worker": "background.js" }
+  ,"permissions": ["storage", "activeTab", "scripting", "contextMenus"]
+  ,"host_permissions": ["<all_urls>"]
+  ,"content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_script.js"],
+      "run_at": "document_idle"
+    }
   ]
+  ,"commands": {
+    "clear_overlays": {
+      "suggested_key": { "default": "Ctrl+Shift+X" },
+      "description": "Clear all overlays"
+    },
+    "party_mode": {
+      "suggested_key": { "default": "Ctrl+Shift+P" },
+      "description": "Party mode"
+    }
+  }
 }

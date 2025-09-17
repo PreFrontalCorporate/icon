@@ -1,0 +1,12 @@
+{
+  "name": "icon-extension",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "build": "esbuild background.ts --bundle --outfile=background.js --platform=browser --target=chrome96 && esbuild content_script.ts --bundle --outfile=content_script.js --platform=browser --target=chrome96 && esbuild popup.tsx --bundle --outfile=popup.js --platform=browser --target=chrome96"
+  },
+  "devDependencies": {
+    "esbuild": "0.21.5"
+  }
+}
+
