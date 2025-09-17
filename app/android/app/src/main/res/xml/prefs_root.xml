@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/title_settings">
+        <Preference
+            android:key="account"
+            android:title="@string/settings_account"
+            android:summary="Account settings"
+            android:fragment="com.icon.coupons.SettingsActivity$AccountFragment" />
+    </PreferenceCategory>
+</PreferenceScreen>
+

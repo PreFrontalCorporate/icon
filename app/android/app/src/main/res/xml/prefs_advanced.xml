@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/settings_advanced">
+        <Preference
+            android:key="enable_overlays"
+            android:title="@string/settings_enable_overlays"
+            android:summary="@string/settings_enable_overlays_summary" />
+        <Preference
+            android:key="danger"
+            android:title="@string/settings_danger"
+            android:summary="Dangerous actions"
+            android:fragment="com.icon.coupons.SettingsActivity$DangerFragment" />
+    </PreferenceCategory>
+</PreferenceScreen>

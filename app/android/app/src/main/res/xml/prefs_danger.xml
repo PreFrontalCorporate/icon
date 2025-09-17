@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/settings_danger">
+        <Preference
+            android:key="logout"
+            android:title="@string/logout"
+            android:summary="@string/settings_deep_logout_summary" />
+    </PreferenceCategory>
+</PreferenceScreen>
+

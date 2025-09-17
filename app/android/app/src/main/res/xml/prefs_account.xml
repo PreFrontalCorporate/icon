@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/settings_account">
+        <Preference
+            android:key="advanced"
+            android:title="@string/settings_advanced"
+            android:summary="Advanced account settings"
+            android:fragment="com.icon.coupons.SettingsActivity$AdvancedFragment" />
+    </PreferenceCategory>
+</PreferenceScreen>
+
